@@ -1,0 +1,13 @@
+{
+  "network": {
+    "enabled": true,
+    "host": "localhost",
+    "port": 3002,
+    "allowedIPs": ["127.0.0.1", "::1"],
+    "allowedSubnets": []
+  },
+  "allowedDirectories": [
+    "/tmp",
+    "/home/user/documents"
+  ]
+}
