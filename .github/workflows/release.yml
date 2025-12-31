@@ -142,35 +142,66 @@ jobs:
           ## mcp-filesystem Release ${{ github.ref_name }}
           
           ### Installation
-          
+          ## IMPORTANT
+
+          This MCP Server requires a <mark>config.json</mark> file to be created in the same directory as the compiled executable.  This allows MCP servers to be shared between multiple clients rather than managing the configuration within the client itself.
+
+
+
+          **Windows Example**
+
+          ```json
+          {
+            "allowedDirectories": [
+              "C:\\Users\\Username\\AppData\\Roaming\\Claude",
+              "C:\\Users\\Username\\node_modules\\@modelcontextprotocol",
+              "D:\\Github\\"
+            ]
+          }
+          ```
+
+          **Linux Example**
+
+          ```json
+          {
+            "allowedDirectories": [
+              "/data/github",
+              "/home"
+            ]
+          }
+          ```
           Download the appropriate binary for your platform:
           
           **Linux (x86_64):**
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-filesystem-linux-amd64
           chmod +x mcp-filesystem-linux-amd64
-          sudo mv mcp-filesystem-linux-amd64 /usr/local/bin/mcp-filesystem
+          mkdir /usr/local/bin/mcp-servers
+          sudo mv mcp-filesystem-linux-amd64 /usr/local/bin/mcp-servers/mcp-filesystem/mcp-filesystem
           ```
           
           **Linux (ARM64):**
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-filesystem-linux-arm64
           chmod +x mcp-filesystem-linux-arm64
-          sudo mv mcp-filesystem-linux-arm64 /usr/local/bin/mcp-filesystem
+          mkdir /usr/local/bin/mcp-servers
+          sudo mv mcp-filesystem-linux-arm64 /usr/local/bin/mcp-servers/mcp-filesystem/mcp-filesystem
           ```
           
           **macOS (Intel):**
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-filesystem-darwin-amd64
           chmod +x mcp-filesystem-darwin-amd64
-          sudo mv mcp-filesystem-darwin-amd64 /usr/local/bin/mcp-filesystem
+          mkdir /usr/local/bin/mcp-servers
+          sudo mv mcp-filesystem-darwin-amd64 /usr/local/bin/mcp-servers/mcp-filesystem/mcp-filesystem
           ```
           
           **macOS (Apple Silicon):**
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-filesystem-darwin-arm64
           chmod +x mcp-filesystem-darwin-arm64
-          sudo mv mcp-filesystem-darwin-arm64 /usr/local/bin/mcp-filesystem
+          mkdir /usr/local/bin/mcp-servers
+          sudo mv mcp-filesystem-darwin-arm64 /usr/local/bin/mcp-servers/mcp-filesystem/mcp-filesystem
           ```
           
           **Windows (x86_64):**
