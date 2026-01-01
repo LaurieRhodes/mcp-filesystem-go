@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Local config file location finding
+- When the MCP server runs on Windows, the `list_allowed_directories` tool returns lowercase versions of the allowed directory paths, even when the config file contains mixed-case paths
 
 ## [1.0.0] - 2025-05-13
 

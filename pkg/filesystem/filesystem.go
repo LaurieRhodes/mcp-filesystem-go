@@ -24,18 +24,22 @@ type FileInfo struct {
 // FileManager handles filesystem operations with security checks
 type FileManager struct {
 	allowedDirectories []string
+	originalDirectories []string // Store original paths for display
 }
 
 // NewFileManager creates a new FileManager with the given allowed directories
 func NewFileManager(allowedDirs []string) *FileManager {
-	// Normalize all paths consistently
+	// Normalize all paths consistently for comparison
 	normalizedDirs := make([]string, len(allowedDirs))
+	originalDirs := make([]string, len(allowedDirs))
 	for i, dir := range allowedDirs {
 		normalizedDirs[i] = normalizePath(filepath.Clean(dir))
+		originalDirs[i] = dir // Store original path for display
 	}
 
 	return &FileManager{
 		allowedDirectories: normalizedDirs,
+		originalDirectories: originalDirs,
 	}
 }
 
@@ -562,7 +566,7 @@ func (fm *FileManager) GetFileInfo(path string) (string, error) {
 
 // ListAllowedDirectories returns the list of allowed directories
 func (fm *FileManager) ListAllowedDirectories() string {
-	return fmt.Sprintf("Allowed directories:\n%s", strings.Join(fm.allowedDirectories, "\n"))
+	return fmt.Sprintf("Allowed directories:\n%s", strings.Join(fm.originalDirectories, "\n"))
 }
 
 // ParseReadFileArgs parses arguments for read_file
