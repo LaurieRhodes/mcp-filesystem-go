@@ -129,15 +129,43 @@ func (em *EditManager) StrReplace(filePath, oldStr, newStr string) error {
 }
 
 // Insert inserts text after a specified line number
+// Supports special line_number value -1 to append to end
+// Auto-creates files if they don't exist (when lineNumber is 0 or -1)
 func (em *EditManager) Insert(filePath string, lineNumber int, text string) error {
-	// Read file line by line
+	// Try to read the file
 	file, err := os.Open(filePath)
+	
+	var lines []string
+	
 	if err != nil {
+		// Check if error is "file not found"
+		if os.IsNotExist(err) {
+			// File doesn't exist - can we create it?
+			if lineNumber != 0 && lineNumber != -1 {
+				return fmt.Errorf("file doesn't exist; use line_number=0 or 'start' to create at beginning, or line_number=-1/'end'/'append' to create")
+			}
+			
+			// Create parent directory if needed
+			parentDir := filepath.Dir(filePath)
+			if err := os.MkdirAll(parentDir, 0755); err != nil {
+				return fmt.Errorf("failed to create parent directory: %w", err)
+			}
+			
+			// Create new file with just the text
+			newContent := text + "\n"
+			if err := os.WriteFile(filePath, []byte(newContent), 0644); err != nil {
+				return fmt.Errorf("failed to create file: %w", err)
+			}
+			
+			return nil
+		}
+		
+		// Other errors (not file not found)
 		return fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 
-	var lines []string
+	// File exists - read it
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
@@ -147,13 +175,18 @@ func (em *EditManager) Insert(filePath string, lineNumber int, text string) erro
 		return fmt.Errorf("error reading file: %w", err)
 	}
 
-	// Validate line number (1-indexed)
+	// Handle special value -1 (append to end)
+	if lineNumber == -1 {
+		lineNumber = len(lines)
+	}
+
+	// Validate line number (1-indexed for user, but we use 0-indexed internally)
 	if lineNumber < 0 || lineNumber > len(lines) {
 		return fmt.Errorf("invalid line number %d; file has %d lines (use 0 to insert at beginning, %d to append)", 
 			lineNumber, len(lines), len(lines))
 	}
 
-	// Create backup
+	// Create backup before modifying
 	backupPath, err := em.createBackup(filePath)
 	if err != nil {
 		return err
@@ -264,8 +297,18 @@ var InsertSchema = map[string]interface{}{
 			"description": "Path to the file to edit",
 		},
 		"line_number": map[string]interface{}{
-			"type":        "integer",
-			"description": "Line number after which to insert (0 for beginning, file line count to append)",
+			"oneOf": []interface{}{
+				map[string]interface{}{
+					"type":        "integer",
+					"description": "Line number after which to insert (0 for beginning, -1 or file line count to append)",
+				},
+				map[string]interface{}{
+					"type":        "string",
+					"enum":        []string{"start", "beginning", "end", "append"},
+					"description": "Keyword: 'start'/'beginning' (insert at beginning) or 'end'/'append' (append to end)",
+				},
+			},
+			"description": "Line number (integer) or keyword (string: 'start', 'end', 'append')",
 		},
 		"text": map[string]interface{}{
 			"type":        "string",
@@ -306,9 +349,17 @@ var EditorTools = map[string]EditorTool{
 	},
 	"insert": {
 		Name: "insert",
-		Description: "Insert text after a specified line number in a file (1-indexed). Use line_number=0 " +
-			"to insert at the beginning of the file, or line_number equal to the file's line count to append. " +
-			"A backup is automatically created before the edit. Only works within allowed directories.",
+		Description: "Insert text after a specified line number in a file. If the file doesn't exist, it will be created.\n\n" +
+			"Line number options:\n" +
+			"- Integer (0-based): Insert after specific line (0 = beginning)\n" +
+			"- 'start' or 'beginning': Insert at start of file\n" +
+			"- 'end' or 'append': Append to end of file\n" +
+			"- -1: Append to end (programmatic use)\n\n" +
+			"File creation:\n" +
+			"- If file doesn't exist and line_number is 0/'start'/-1/'end'/'append': Creates file with text\n" +
+			"- If file doesn't exist and line_number is other value: Returns error\n" +
+			"- Parent directories are created automatically if needed\n\n" +
+			"A backup is automatically created before editing existing files. Only works within allowed directories.",
 		InputSchema: InsertSchema,
 	},
 	"undo_edit": {
@@ -346,26 +397,45 @@ func ParseStrReplaceArgs(args json.RawMessage) (path, oldStr, newStr string, err
 }
 
 // ParseInsertArgs parses arguments for insert
+// Supports both integer line numbers and keywords: "start", "end", "append"
 func ParseInsertArgs(args json.RawMessage) (path string, lineNumber int, text string, err error) {
-	var params struct {
-		Path       string `json:"path"`
-		LineNumber int    `json:"line_number"`
-		Text       string `json:"text"`
-	}
-
-	if err := json.Unmarshal(args, &params); err != nil {
+	// Try to parse as raw JSON to check the type of line_number
+	var rawParams map[string]interface{}
+	if err := json.Unmarshal(args, &rawParams); err != nil {
 		return "", 0, "", fmt.Errorf("invalid arguments for insert: %w", err)
 	}
 
-	if params.Path == "" {
+	// Get path and text (always strings)
+	path, _ = rawParams["path"].(string)
+	text, _ = rawParams["text"].(string)
+
+	if path == "" {
 		return "", 0, "", fmt.Errorf("path parameter is required")
 	}
 
-	if params.Text == "" {
+	if text == "" {
 		return "", 0, "", fmt.Errorf("text parameter is required")
 	}
 
-	return params.Path, params.LineNumber, params.Text, nil
+	// Handle line_number - can be int or string
+	switch v := rawParams["line_number"].(type) {
+	case float64: // JSON numbers are float64
+		lineNumber = int(v)
+	case string:
+		// Handle keyword strings
+		switch strings.ToLower(v) {
+		case "start", "begin", "beginning":
+			lineNumber = 0
+		case "end", "append", "bottom":
+			lineNumber = -1 // Special value: means append to end
+		default:
+			return "", 0, "", fmt.Errorf("invalid line_number keyword: %q (use 'start', 'end', 'append', or integer)", v)
+		}
+	default:
+		return "", 0, "", fmt.Errorf("line_number must be an integer or keyword ('start'/'end'/'append')")
+	}
+
+	return path, lineNumber, text, nil
 }
 
 // ParseUndoEditArgs parses arguments for undo_edit

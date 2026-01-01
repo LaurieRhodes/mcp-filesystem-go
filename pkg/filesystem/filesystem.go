@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -343,10 +344,12 @@ var FilesystemTools = map[string]FilesystemTool{
 	},
 	"get_file_info": {
 		Name: "get_file_info",
-		Description: "Retrieve detailed metadata about a file or directory. Returns comprehensive " +
-			"information including size, creation time, last modified time, permissions, " +
-			"and type. This tool is perfect for understanding file characteristics " +
-			"without reading the actual content. Only works within allowed directories.",
+		Description: "Retrieve detailed metadata about a file or directory. Returns JSON with an 'exists' field:\n" +
+			"- If file exists: Returns metadata (size, modified, permissions, lines, etc.)\n" +
+			"- If file doesn't exist: Returns {\"exists\": false} (NOT an error)\n\n" +
+			"This makes it easy to check if a file exists before creating or editing it. " +
+			"For text files, includes a 'lines' field with the line count for easy appending. " +
+			"Only works within allowed directories.",
 		InputSchema: GetFileInfoSchema,
 	},
 	"list_allowed_directories": {
@@ -539,6 +542,7 @@ func (fm *FileManager) MoveFile(source, destination string) error {
 }
 
 // GetFileInfo gets information about a file
+// Returns JSON with "exists" field - file not found is NOT an error
 func (fm *FileManager) GetFileInfo(path string) (string, error) {
 	validPath, err := fm.ValidatePath(path)
 	if err != nil {
@@ -547,21 +551,63 @@ func (fm *FileManager) GetFileInfo(path string) (string, error) {
 
 	info, err := GetFileStats(validPath)
 	if err != nil {
+		// Check if it's a "file not found" error - this is NOT an error condition
+		if os.IsNotExist(err) {
+			result := map[string]interface{}{
+				"exists": false,
+				"path":   validPath,
+			}
+			jsonResult, _ := json.Marshal(result)
+			return string(jsonResult), nil
+		}
+		// Other errors (permissions, etc.) are still returned as errors
 		return "", fmt.Errorf("failed to get file info: %w", err)
 	}
 
-	// Format the file info
-	result := []string{
-		fmt.Sprintf("size: %d", info.Size),
-		fmt.Sprintf("created: %s", info.Created),
-		fmt.Sprintf("modified: %s", info.Modified),
-		fmt.Sprintf("accessed: %s", info.Accessed),
-		fmt.Sprintf("isDirectory: %t", info.IsDirectory),
-		fmt.Sprintf("isFile: %t", info.IsFile),
-		fmt.Sprintf("permissions: %s", info.Permissions),
+	// File exists - return full info with exists: true
+	result := map[string]interface{}{
+		"exists":      true,
+		"path":        validPath,
+		"size":        info.Size,
+		"created":     info.Created,
+		"modified":    info.Modified,
+		"accessed":    info.Accessed,
+		"isDirectory": info.IsDirectory,
+		"isFile":      info.IsFile,
+		"permissions": info.Permissions,
+		"lines":       0, // Will be populated below for text files
+	}
+	
+	// For text files, count lines
+	if info.IsFile && !info.IsDirectory {
+		if lineCount, err := countLines(validPath); err == nil {
+			result["lines"] = lineCount
+		}
 	}
 
-	return strings.Join(result, "\n"), nil
+	jsonResult, _ := json.Marshal(result)
+	return string(jsonResult), nil
+}
+
+// countLines counts the number of lines in a text file
+func countLines(filePath string) (int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	lineCount := 0
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lineCount++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+
+	return lineCount, nil
 }
 
 // ListAllowedDirectories returns the list of allowed directories
