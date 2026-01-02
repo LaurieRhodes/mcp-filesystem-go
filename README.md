@@ -81,8 +81,65 @@ If the `config.json` file doesn't exist, a default one will be created with the 
 
 ### Prerequisites
 
-- Go 1.21 or higher
+- Go 1.21 or higher (only for building from source)
 - Basic understanding of MCP architecture
+
+### Installation
+
+#### Download Pre-built Binaries
+
+Download the latest release for your platform from the [Releases page](https://github.com/LaurieRhodes/mcp-filesystem-go/releases).
+
+**Linux (x86_64)**:
+
+```bash
+wget https://github.com/LaurieRhodes/mcp-filesystem-go/releases/latest/download/mcp-filesystem-linux-amd64
+chmod +x mcp-filesystem-linux-amd64
+sudo mkdir -p /usr/local/bin/mcp-servers/filesystem
+sudo mv mcp-filesystem-linux-amd64 /usr/local/bin/mcp-servers/filesystem/mcp-filesystem
+
+# Create config file with your allowed directories
+sudo tee /usr/local/bin/mcp-servers/filesystem/config.json > /dev/null <<'EOF'
+{
+  "allowedDirectories": [
+    "/home",
+    "/tmp"
+  ]
+}
+EOF
+```
+
+**macOS (Apple Silicon)**:
+
+```bash
+wget https://github.com/LaurieRhodes/mcp-filesystem-go/releases/latest/download/mcp-filesystem-darwin-arm64
+chmod +x mcp-filesystem-darwin-arm64
+sudo mkdir -p /usr/local/bin/mcp-servers/filesystem
+sudo mv mcp-filesystem-darwin-arm64 /usr/local/bin/mcp-servers/filesystem/mcp-filesystem
+
+# Create config file with your allowed directories
+sudo tee /usr/local/bin/mcp-servers/filesystem/config.json > /dev/null <<'EOF'
+{
+  "allowedDirectories": [
+    "/Users/username/Documents",
+    "/Users/username/Projects"
+  ]
+}
+EOF
+```
+
+**Windows**:
+
+Download the `.exe` file and place it in a directory with a `config.json` file:
+
+```json
+{
+  "allowedDirectories": [
+    "C:\\Users\\Username\\Documents",
+    "C:\\Users\\Username\\Projects"
+  ]
+}
+```
 
 ### Building from Source
 
@@ -124,9 +181,21 @@ chmod +x mcp-filesystem-go
 
 ### MCP Client Configuration
 
-Note that unlike the Node.js version, allowed directories are specified in the `config.json` file **in the same directory as the compiled MCP server**, not as command-line arguments. This allows a modular portability of the MCP tooling between different GenAI tools rather than creating a dependency on a single tool like Claude Desktop.
+The server requires a `config.json` file in the same directory as the executable to specify allowed directories. This design allows MCP servers to be shared between multiple clients rather than managing configuration within each client.
 
-In your MCP client configuration, set up the filesystem server like this:
+In your MCP client configuration (e.g., Claude Desktop), reference the server binary:
+
+#### Linux/macOS Example
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "/usr/local/bin/mcp-servers/filesystem/mcp-filesystem"
+    }
+  }
+}
+```
 
 #### Windows Example
 
@@ -134,25 +203,13 @@ In your MCP client configuration, set up the filesystem server like this:
 {
   "mcpServers": {
     "filesystem": {
-      "command": "C:\\path\\to\\mcp-filesystem-go.exe",
-      "args": []
+      "command": "C:\\path\\to\\mcp-filesystem.exe"
     }
   }
 }
 ```
 
-#### Linux Example
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "/home/username/path/to/mcp-filesystem-go",
-      "args": []
-    }
-  }
-}
-```
+**Note**: Update the paths in your `config.json` file (located next to the executable) to match your allowed directories.
 
 ## 📊 Implementation Details
 

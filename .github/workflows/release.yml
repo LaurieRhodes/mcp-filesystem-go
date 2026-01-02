@@ -170,38 +170,78 @@ jobs:
             ]
           }
           ```
-          Download the appropriate binary for your platform:
+          Download the appropriate binary for your platform and create the config file:
           
           **Linux (x86_64):**
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-filesystem-linux-amd64
           chmod +x mcp-filesystem-linux-amd64
-          mkdir /usr/local/bin/mcp-servers
-          sudo mv mcp-filesystem-linux-amd64 /usr/local/bin/mcp-servers/mcp-filesystem/mcp-filesystem
+          sudo mkdir -p /usr/local/bin/mcp-servers/filesystem
+          sudo mv mcp-filesystem-linux-amd64 /usr/local/bin/mcp-servers/filesystem/mcp-filesystem
+          
+          # Create config file with your allowed directories
+          sudo tee /usr/local/bin/mcp-servers/filesystem/config.json > /dev/null <<'CONFIG'
+          {
+            "allowedDirectories": [
+              "/home",
+              "/tmp"
+            ]
+          }
+          CONFIG
           ```
           
           **Linux (ARM64):**
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-filesystem-linux-arm64
           chmod +x mcp-filesystem-linux-arm64
-          mkdir /usr/local/bin/mcp-servers
-          sudo mv mcp-filesystem-linux-arm64 /usr/local/bin/mcp-servers/mcp-filesystem/mcp-filesystem
+          sudo mkdir -p /usr/local/bin/mcp-servers/filesystem
+          sudo mv mcp-filesystem-linux-arm64 /usr/local/bin/mcp-servers/filesystem/mcp-filesystem
+          
+          # Create config file with your allowed directories
+          sudo tee /usr/local/bin/mcp-servers/filesystem/config.json > /dev/null <<'CONFIG'
+          {
+            "allowedDirectories": [
+              "/home",
+              "/tmp"
+            ]
+          }
+          CONFIG
           ```
           
           **macOS (Intel):**
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-filesystem-darwin-amd64
           chmod +x mcp-filesystem-darwin-amd64
-          mkdir /usr/local/bin/mcp-servers
-          sudo mv mcp-filesystem-darwin-amd64 /usr/local/bin/mcp-servers/mcp-filesystem/mcp-filesystem
+          sudo mkdir -p /usr/local/bin/mcp-servers/filesystem
+          sudo mv mcp-filesystem-darwin-amd64 /usr/local/bin/mcp-servers/filesystem/mcp-filesystem
+          
+          # Create config file with your allowed directories
+          sudo tee /usr/local/bin/mcp-servers/filesystem/config.json > /dev/null <<'CONFIG'
+          {
+            "allowedDirectories": [
+              "/Users/username/Documents",
+              "/Users/username/Projects"
+            ]
+          }
+          CONFIG
           ```
           
           **macOS (Apple Silicon):**
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mcp-filesystem-darwin-arm64
           chmod +x mcp-filesystem-darwin-arm64
-          mkdir /usr/local/bin/mcp-servers
-          sudo mv mcp-filesystem-darwin-arm64 /usr/local/bin/mcp-servers/mcp-filesystem/mcp-filesystem
+          sudo mkdir -p /usr/local/bin/mcp-servers/filesystem
+          sudo mv mcp-filesystem-darwin-arm64 /usr/local/bin/mcp-servers/filesystem/mcp-filesystem
+          
+          # Create config file with your allowed directories
+          sudo tee /usr/local/bin/mcp-servers/filesystem/config.json > /dev/null <<'CONFIG'
+          {
+            "allowedDirectories": [
+              "/Users/username/Documents",
+              "/Users/username/Projects"
+            ]
+          }
+          CONFIG
           ```
           
           **Windows (x86_64):**
