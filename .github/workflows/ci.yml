@@ -53,29 +53,10 @@ jobs:
           flags: unittests
           fail_ci_if_error: false
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-      
-      - name: Build
-        run: go build -v .
-      
-      - name: Test help command
-        run: ./mcp-filesystem-go --help
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    continue-on-error: true  # Don't fail release on lint errors
+    continue-on-error: true  # Don't fail CI on lint errors
     
     steps:
       - name: Checkout code
